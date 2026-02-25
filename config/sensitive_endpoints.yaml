@@ -1,0 +1,4 @@
+high_risk:
+  - /api/transfer
+  - /api/delete-account
+  - /admin/reset-password

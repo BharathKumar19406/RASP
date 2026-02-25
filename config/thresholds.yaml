@@ -1,0 +1,3 @@
+drift:
+  medium: 20   # ← very low
+  high: 35     # ← very low
