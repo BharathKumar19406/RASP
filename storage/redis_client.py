@@ -1,10 +1,10 @@
-import redis
 from config.settings import settings
+import redis
 
-_redis_client = None
+_r = None
 
 def get_redis():
-    global _redis_client
-    if _redis_client is None:
-        _redis_client = redis.from_url(settings.REDIS_URL)
-    return _redis_client
+    global _r
+    if _r is None:
+        _r = redis.from_url(settings.REDIS_URL)
+    return _r

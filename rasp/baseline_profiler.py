@@ -1,33 +1,29 @@
+# rasp/baseline_profiler.py
 import json
-import statistics
-from storage.redis_client import get_redis
+import redis
+from config.settings import settings
 
-def get_baseline_key(endpoint: str) -> str:
-    return f"baseline:{endpoint}"
+r = redis.from_url(settings.REDIS_URL)
+
+def get_baseline_key(endpoint: str, user_role: str = "user", geo_region: str = "GLOBAL") -> str:
+    return f"baseline:{user_role}:{geo_region}:{endpoint}"
 
 def update_baseline(endpoint: str, features):
-    r = get_redis()
-    key = get_baseline_key(endpoint)
-    
-    baseline = {}
-    if r.exists(key):
-        baseline = json.loads(r.get(key))
-    else:
-        baseline = {"param_counts": [], "body_sizes": [], "access_count": 0}
-    
-    baseline["param_counts"].append(features.param_count)
-    baseline["body_sizes"].append(features.body_size)
-    baseline["access_count"] += 1
-    
-    # Keep only last 100 samples
-    baseline["param_counts"] = baseline["param_counts"][-100:]
-    baseline["body_sizes"] = baseline["body_sizes"][-100:]
-    
-    r.set(key, json.dumps(baseline))
+    key = get_baseline_key(endpoint, features.user_role)
+    print(f"[BASELINE] Saving to key: {key}")
+    data = r.get(key)
+    baseline = json.loads(data) if data else {
+        "body_sizes": [],
+        "param_counts": [],
+        "access_count": 0,
+        "recent_hashes": []
+    }
 
-def get_baseline(endpoint: str):
-    r = get_redis()
-    key = get_baseline_key(endpoint)
-    if r.exists(key):
-        return json.loads(r.get(key))
-    return None
+    baseline["body_sizes"].append(features.body_size)
+    baseline["param_counts"].append(features.param_count)
+    baseline["access_count"] += 1
+    if features.body_hash:
+        baseline["recent_hashes"].append(features.body_hash)
+        baseline["recent_hashes"] = baseline["recent_hashes"][-10:]
+
+    r.set(key, json.dumps(baseline))

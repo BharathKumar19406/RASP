@@ -1,14 +1,23 @@
 from fastapi import FastAPI
 from rasp.interceptor import RASPMiddleware
-from app.routes import public, protected
+from utils.auth import get_current_user
 
-app = FastAPI(title="RASP-Protected Application")
+app = FastAPI(title="RASP Protected Application")
 
 app.add_middleware(RASPMiddleware)
 
-app.include_router(public.router)
-app.include_router(protected.router)
-
 @app.get("/health")
-def health_check():
+def health():
     return {"status": "OK"}
+
+@app.post("/api/login")
+def login():
+    return {"message": "Logged in"}
+
+@app.post("/api/transfer")
+def transfer():
+    return {"status": "transferred"}
+
+@app.delete("/api/delete-account")
+def delete_account():
+    return {"status": "scheduled"}

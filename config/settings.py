@@ -1,27 +1,23 @@
+# config/settings.py
 import os
-from dotenv import load_dotenv
 import yaml
+from dotenv import load_dotenv
 
 load_dotenv()
 
 class Settings:
     DB_URL = os.getenv("DB_URL")
     REDIS_URL = os.getenv("REDIS_URL")
-    APP_HOST = os.getenv("APP_HOST", "0.0.0.0")
-    APP_PORT = int(os.getenv("APP_PORT", 8000))
-    DASHBOARD_PORT = int(os.getenv("DASHBOARD_PORT", 8501))
-    SAFE_MODE = os.getenv("SAFE_MODE", "false").lower() == "true"  # ← NEW
+    LOG_SECRET_KEY = os.getenv("LOG_SECRET_KEY", "default-secret")
+    SAFE_MODE = os.getenv("SAFE_MODE", "false").lower() == "true"
 
-    @staticmethod
-    def load_thresholds():
-        with open("config/thresholds.yaml") as f:
-            return yaml.safe_load(f)
-
-    @staticmethod
-    def load_sensitive_endpoints():
-        with open("config/sensitive_endpoints.yaml") as f:
-            return yaml.safe_load(f)
+    @property
+    def thresholds(self):
+        try:
+            with open("config/thresholds.yaml") as f:
+                cfg = yaml.safe_load(f)
+            return cfg.get("drift", {"medium": 15, "high": 30})
+        except Exception:
+            return {"medium": 15, "high": 30}
 
 settings = Settings()
-thresholds = settings.load_thresholds()
-sensitive_endpoints = settings.load_sensitive_endpoints()

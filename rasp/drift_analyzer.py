@@ -1,42 +1,41 @@
+# rasp/drift_analyzer.py
+import json
 import statistics
-from rasp.models import DriftResult
-from rasp.baseline_profiler import get_baseline
+from config.settings import settings
+from storage.redis_client import get_redis
 
-def classify_attack(features, baseline) -> str:
-    if not baseline:
-        return "Unknown"
-    if baseline["body_sizes"]:
-        avg_body = statistics.mean(baseline["body_sizes"])
-        if features.body_size > avg_body * 3:
-            return "Payload Flooding"
-    if baseline["param_counts"]:
-        avg_params = statistics.mean(baseline["param_counts"])
-        if features.param_count > avg_params * 2:
-            return "Parameter Spam"
-    return "Behavioral Anomaly"
-
-def detect_drift(endpoint: str, features) -> 'DriftResult':
-    baseline = get_baseline(endpoint)
-    if not baseline or baseline["access_count"] < 3:  # ← Reduced from 5
-        return DriftResult(score=0.0, attack_type="Baseline Learning")
+def detect_drift(endpoint: str, features) -> float:
+    r = get_redis()
     
-    score = 0.0
+    # ✅ EXACT same key as baseline_profiler.py
+    key = f"baseline:{features.user_role}:GLOBAL:{endpoint}"
+    print(f"[DRIFT] Looking for key: {key}")
+    data = r.get(key)
+    if not data:
+        # Fallback to legacy (for safety)
+        key_legacy = f"baseline:{endpoint}"
+        data = r.get(key_legacy)
+        if not data:
+            return 0.0
 
-    # Body size: more sensitive (3x normal = max score)
-    if baseline["body_sizes"]:
-        avg_size = statistics.mean(baseline["body_sizes"])
-        if avg_size > 0:
-            ratio = features.body_size / avg_size
-            if ratio > 3:
-                score += min((ratio - 3) * 20 + 40, 100)  # Start at 40, scale up
+    try:
+        baseline = json.loads(data)
+    except Exception:
+        return 0.0
 
-    # Parameter count: 2x = high score
-    if baseline["param_counts"]:
-        avg_params = statistics.mean(baseline["param_counts"])
-        if avg_params > 0:
-            ratio = features.param_count / avg_params
-            if ratio > 2:
-                score += min((ratio - 2) * 25 + 30, 60)  # Max 60 from params
+    body_sizes = baseline.get("body_sizes", [])
+    if not body_sizes:
+        return 0.0
 
-    attack_type = classify_attack(features, baseline)
-    return DriftResult(score=min(score, 100.0), attack_type=attack_type)
+    avg_body = statistics.mean(body_sizes)
+    if avg_body <= 0:
+        return 0.0
+
+    ratio = features.body_size / avg_body
+    # ✅ Simple, reliable scoring: ratio * 10 (capped at 100)
+    score = min(ratio * 10, 100.0)
+
+    # 🔍 Debug: Print to terminal (remove in prod)
+    print(f"[DRIFT] Endpoint={endpoint} | Body={features.body_size} | Avg={avg_body:.1f} | Ratio={ratio:>.1f} | Score={score:.1f}")
+
+    return score
