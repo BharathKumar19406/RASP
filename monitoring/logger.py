@@ -1,16 +1,14 @@
-# monitoring/logger.py
-from storage.db import SessionLocal
-from storage.models import RuntimeEvent
 import uuid
 import json
 from datetime import datetime
+from storage.db import SessionLocal
+from storage.models import RuntimeEvent
 
-def log_event(features, drift_score, risk_level, classification: dict):
+def log_event(features, drift_score, risk_level, attack: dict):
     db = SessionLocal()
     try:
         event = RuntimeEvent(
             id=str(uuid.uuid4()),
-            timestamp=datetime.utcnow(),
             ip_hash=features.ip_hash,
             endpoint=features.endpoint,
             method=features.method,
@@ -18,10 +16,10 @@ def log_event(features, drift_score, risk_level, classification: dict):
             body_size=features.body_size,
             drift_score=drift_score,
             risk_level=risk_level,
-            attack_type=classification["type"],
-            attack_confidence=classification["confidence"],
-            attack_evidence=json.dumps(classification["evidence"]),
-            user_role=features.user_role
+            attack_type=attack["type"],
+            attack_confidence=attack["confidence"],
+            attack_evidence=json.dumps(attack["evidence"]),
+            user_role="user"
         )
         db.add(event)
         db.commit()

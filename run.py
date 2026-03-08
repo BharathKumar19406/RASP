@@ -4,8 +4,7 @@ import time
 import os
 from dotenv import load_dotenv
 
-# ✅ Load .env BEFORE anything else
-load_dotenv()  # ← Critical!
+load_dotenv()
 
 def main():
     required = ["DB_URL", "REDIS_URL", "LOG_SECRET_KEY"]
@@ -23,10 +22,10 @@ def main():
     
     dashboard = subprocess.Popen([
         sys.executable, "-m", "streamlit",
-        "run", "dashboard/config_pane.py", "--server.port=8501"
+        "run", "dashboard/welcome.py", "--server.port=8501"
     ])
     
-    print("✅ Application: http://localhost:8000")
+    print("✅ RASP Demo API: http://localhost:8000")
     print("✅ Admin Dashboard: http://localhost:8501")
     print("\nPress Ctrl+C to stop.\n")
 

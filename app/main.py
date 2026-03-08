@@ -1,23 +1,16 @@
-from fastapi import FastAPI
+# app/main.py
+from fastapi import FastAPI, Request
 from rasp.interceptor import RASPMiddleware
-from utils.auth import get_current_user
 
-app = FastAPI(title="RASP Protected Application")
-
+app = FastAPI()
 app.add_middleware(RASPMiddleware)
 
 @app.get("/health")
 def health():
     return {"status": "OK"}
 
-@app.post("/api/login")
-def login():
-    return {"message": "Logged in"}
-
-@app.post("/api/transfer")
-def transfer():
-    return {"status": "transferred"}
-
-@app.delete("/api/delete-account")
-def delete_account():
-    return {"status": "scheduled"}
+# ✅ Add this: Catch-all route to let RASP process all paths
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def catch_all(path: str, request: Request):
+    # Return 200 so RASP can analyze the request
+    return {"message": f"Path {path} processed by RASP", "method": request.method}

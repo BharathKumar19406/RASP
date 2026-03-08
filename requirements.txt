@@ -1,24 +1,10 @@
-# Core
 fastapi
 uvicorn[standard]
- python-dotenv
-# Data & Storage
 sqlalchemy
 psycopg2-binary
 redis
 pyyaml
 python-dotenv
-
-# Dashboard
 streamlit
 plotly
 pandas
-
-# Security
-pyjwt
-cryptography
-hmac
-
-# Testing & Dev
-pytest
-requests

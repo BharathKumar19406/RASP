@@ -1,29 +1,21 @@
-# rasp/baseline_profiler.py
 import json
-import redis
-from config.settings import settings
+from statistics import quantiles
+from storage.redis_client import get_redis
 
-r = redis.from_url(settings.REDIS_URL)
-
-def get_baseline_key(endpoint: str, user_role: str = "user", geo_region: str = "GLOBAL") -> str:
-    return f"baseline:{user_role}:{geo_region}:{endpoint}"
-
-def update_baseline(endpoint: str, features):
-    key = get_baseline_key(endpoint, features.user_role)
-    print(f"[BASELINE] Saving to key: {key}")
+def update_baseline(endpoint: str, method: str, features):
+    r = get_redis()
+    key = f"baseline:{endpoint}:{method}"
     data = r.get(key)
-    baseline = json.loads(data) if data else {
-        "body_sizes": [],
-        "param_counts": [],
-        "access_count": 0,
-        "recent_hashes": []
-    }
-
-    baseline["body_sizes"].append(features.body_size)
-    baseline["param_counts"].append(features.param_count)
-    baseline["access_count"] += 1
-    if features.body_hash:
-        baseline["recent_hashes"].append(features.body_hash)
-        baseline["recent_hashes"] = baseline["recent_hashes"][-10:]
-
+    baseline = json.loads(data) if data else {"sizes": []}
+    
+    baseline["sizes"].append(features.body_size)
+    baseline["sizes"] = baseline["sizes"][-1000:]
+    
+    if len(baseline["sizes"]) >= 50:
+        try:
+            p95 = quantiles(baseline["sizes"], n=100)[94]
+            baseline["adaptive_high"] = min(p95 * 3.0, 10000)
+        except:
+            pass
+    
     r.set(key, json.dumps(baseline))

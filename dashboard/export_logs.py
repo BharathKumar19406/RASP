@@ -1,12 +1,11 @@
-from storage.db import SessionLocal, RuntimeEvent
-from datetime import datetime
-import pandas as pd
 import streamlit as st
+import pandas as pd
+from storage.db import SessionLocal
+from storage.models import RuntimeEvent
 
 def show_export():
     st.subheader("📥 Export Security Logs")
-
-    db = SessionLocal()  # ✅ Real session
+    db = SessionLocal()
     try:
         events = db.query(RuntimeEvent).order_by(RuntimeEvent.timestamp.desc()).all()
     finally:

@@ -2,7 +2,6 @@ from config.settings import settings
 import redis
 
 _r = None
-
 def get_redis():
     global _r
     if _r is None:

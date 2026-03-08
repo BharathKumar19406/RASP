@@ -1,4 +1,3 @@
-# storage/models.py
 from sqlalchemy import Column, String, Integer, Float, DateTime, Text
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime

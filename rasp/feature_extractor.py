@@ -1,10 +1,7 @@
-from fastapi import Request
-from dataclasses import dataclass
 import hashlib
-import time
-import re 
-import jwt
-from utils.auth import get_current_user
+import re
+from dataclasses import dataclass
+from fastapi import Request
 
 @dataclass
 class RequestFeatures:
@@ -12,51 +9,42 @@ class RequestFeatures:
     method: str
     ip: str
     ip_hash: str
-    user_role: str
-    param_count: int
+    user_agent: str
     body_size: int
-    request_rate: int = 1
-    body_hash: str = ""
-    sql_keyword_count: int = 0
+    param_count: int
+    has_sql: bool
+    has_xss: bool
+    has_path_traversal: bool
+    has_ssr: bool
+    has_jwt: bool
 
-def extract_features(request: Request, body_sample: str = "") -> RequestFeatures:
+def extract_features(request: Request, body: str) -> RequestFeatures:
     endpoint = request.url.path
     method = request.method
     ip = request.client.host if request.client else "127.0.0.1"
     ip_hash = hashlib.sha256(ip.encode()).hexdigest()[:16]
+    ua = request.headers.get("user-agent", "")
     
-    # User role from JWT (mocked)
-    user_role = "admin" if "admin" in get_current_user().lower() else "user"
-    
+    body_size = len(body)
     param_count = len(request.query_params)
-    body_size = 0
-    content_length = request.headers.get("content-length")
-    if content_length and content_length.isdigit():
-        body_size = int(content_length)
     
-    # Body hash (for repetition detection)
-    body_hash = ""
-    if body_sample:
-        body_hash = hashlib.sha256(body_sample.encode()).hexdigest()[:16]
-    
-    # SQL keyword count (safe mode only)
-    sql_keyword_count = 0
-    if body_sample and len(body_sample) > 100:
-        patterns = [
-            r"(?i)(union\s+select|select\s+\*\s+from|insert\s+into|drop\s+table)",
-            r"(?i)(or\s+1\s*=\s*1|and\s+1\s*=\s*1|sleep\(\d+\))",
-        ]
-        for p in patterns:
-            sql_keyword_count += len(re.findall(p, body_sample))
-    
+    has_sql = bool(re.search(r"(?i)(union\s+select|or\s+1\s*=\s*1)", body))
+    has_xss = bool(re.search(r"<script|javascript:", body, re.IGNORECASE))
+    has_path_traversal = "../" in body or "..\\" in body
+    has_ssr = "127.0.0.1" in body or "localhost" in body
+    has_jwt = "Authorization" in request.headers and "Bearer " in request.headers["Authorization"]
+
     return RequestFeatures(
         endpoint=endpoint,
         method=method,
         ip=ip,
         ip_hash=ip_hash,
-        user_role=user_role,
-        param_count=param_count,
+        user_agent=ua,
         body_size=body_size,
-        body_hash=body_hash,
-        sql_keyword_count=sql_keyword_count
+        param_count=param_count,
+        has_sql=has_sql,
+        has_xss=has_xss,
+        has_path_traversal=has_path_traversal,
+        has_ssr=has_ssr,
+        has_jwt=has_jwt
     )
