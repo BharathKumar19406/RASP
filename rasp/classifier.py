@@ -1,5 +1,33 @@
 # rasp/classifier.py
-def classify_attack(endpoint: str, method: str, body: str, headers: dict, features, drift_score: float) -> dict:
+from .behavioral_detector import classify_behavioral_attacks
+
+def classify_attack(endpoint: str, method: str, body: str, headers: dict, features, drift_score: float, ip: str = "unknown", response_status: int = 200) -> dict:
+    """
+    Comprehensive attack classification combining:
+    1. Pattern-based detection (static)
+    2. Behavioral detection (dynamic, tool-aware)
+    
+    Returns attack classification with type, category, confidence, and evidence
+    """
+    
+    # ==================== BEHAVIORAL ATTACKS (Priority 1) ====================
+    # Check for sophisticated behavioral attacks first
+    # These include: SQLMap, scanners, brute force, fuzzing, etc.
+    behavioral_attack = classify_behavioral_attacks(
+        ip=ip,
+        endpoint=endpoint,
+        method=method,
+        body=body,
+        headers=headers,
+        features=features,
+        response_status=response_status,
+        drift_score=drift_score
+    )
+    
+    if behavioral_attack:
+        return behavioral_attack
+    
+    # ==================== PATTERN-BASED ATTACKS (Priority 2) ====================
     evidence = []
 
     # 1. SQL Injection (even in small bodies)

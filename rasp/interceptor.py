@@ -62,22 +62,39 @@ class RASPMiddleware(BaseHTTPMiddleware):
             # Update baseline and track adaptation
             adaptation_info = update_baseline(endpoint, method, features)
             drift_score = detect_drift(endpoint, method, features.body_size)
+            
+            # Classify attacks (with IP for behavioral detection)
             attack = classify_attack(
                 endpoint=endpoint,
                 method=method,
                 body=body_sample,
                 headers=dict(request.headers),
                 features=features,
-                drift_score=drift_score
+                drift_score=drift_score,
+                ip=ip,
+                response_status=200  # Default; behavioral detector can update based on patterns
             )
             risk_level = get_risk_level(drift_score)
             
             # Log event with adaptation info and full details
             log_event(features, drift_score, risk_level, attack, adaptation_info, body_sample)
             
+            # Block on multiple conditions:
+            # 1. HIGH drift score (behavioral anomaly)
+            # 2. CRITICAL/HIGH risk attack detected (tool, brute force, etc)
+            block_request = False
+            block_reason = ""
+            
             if risk_level == "HIGH":
+                block_request = True
+                block_reason = "High-risk behavioral anomaly"
+            elif attack.get("risk_level") in ["CRITICAL", "HIGH"]:
+                block_request = True
+                block_reason = f"Attack detected: {attack.get('type', 'Unknown')}"
+            
+            if block_request:
                 apply_mitigation("block", ip)
-                return Response("Request blocked: High-risk behavior detected", status_code=403)
+                return Response(f"Request blocked: {block_reason}", status_code=403)
 
         except Exception as e:
             print(f"⚠️ RASP ERROR: {e}")
