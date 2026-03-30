@@ -7,6 +7,7 @@ from .drift_analyzer import detect_drift
 from .classifier import classify_attack
 from .mitigator import is_blocked, apply_mitigation
 from .rate_limiter import RateLimiter
+from .tool_aware_rate_limiter import ToolAwareRateLimiter
 from config.settings import settings
 from config.constants import WHITELIST_IPS, ENDPOINT_RATE_LIMITS, get_risk_level
 from monitoring.logger import log_event, log_rate_limit_violation
@@ -15,6 +16,7 @@ class RASPMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
         self.rate_limiter = RateLimiter(settings.RATE_LIMIT_STRATEGY)
+        self.tool_aware_limiter = ToolAwareRateLimiter()  # Enhanced limiter for tools
     
     async def dispatch(self, request: Request, call_next):
         if "/health" in request.url.path:
@@ -22,17 +24,17 @@ class RASPMiddleware(BaseHTTPMiddleware):
 
         ip = request.client.host if request.client else "127.0.0.1"
         endpoint = request.url.path
+        user_agent = request.headers.get("user-agent", "")
         
-        # ==================== RATE LIMITING ====================
+        # Read body for analysis (will be re-read later)
+        body_bytes = await request.body()
+        body_sample = body_bytes.decode("utf-8", errors="ignore")[:2000]
+        
+        # ==================== ENHANCED RATE LIMITING (Tools + Brute Force) ====================
         if settings.RATE_LIMITING_ENABLED and ip not in WHITELIST_IPS:
-            # Get endpoint-specific limits or use default
-            limit_config = ENDPOINT_RATE_LIMITS.get(endpoint, ENDPOINT_RATE_LIMITS["default"])
-            max_requests = limit_config["max_requests"]
-            window_seconds = limit_config["window_seconds"]
-            
-            # Check rate limit
-            allowed, rate_info = self.rate_limiter.check_rate_limit(
-                ip, endpoint, max_requests, window_seconds
+            # Use tool-aware limiter (detects Arjun, FFuf, brute force, fuzzing, etc)
+            allowed, rate_info = self.tool_aware_limiter.check_enhanced_rate_limit(
+                ip, endpoint, user_agent, body_sample
             )
             
             if not allowed:
@@ -42,19 +44,35 @@ class RASPMiddleware(BaseHTTPMiddleware):
                 
                 if settings.BLOCK_ON_RATE_LIMIT:
                     apply_mitigation("block", ip)
-                    return Response(
-                        f"Rate limit exceeded: {max_requests} requests per {window_seconds} second(s). "
-                        f"Reset in {rate_info['reset_in']} seconds.",
-                        status_code=429
-                    )
+                    
+                    tool_info = rate_info.get("tool", "")
+                    pattern_info = rate_info.get("pattern", "")
+                    
+                    if tool_info:
+                        return Response(
+                            f"Rate limit exceeded: Attack tool detected ({tool_info.upper()}). "
+                            f"Max {rate_info['max']} requests per {rate_info['reset_in']} seconds.",
+                            status_code=429
+                        )
+                    elif pattern_info:
+                        return Response(
+                            f"Rate limit exceeded: {pattern_info.upper()} attack detected. "
+                            f"Max {rate_info['max']} requests per {rate_info['reset_in']} seconds.",
+                            status_code=429
+                        )
+                    else:
+                        return Response(
+                            f"Rate limit exceeded: {rate_info['max']} requests per {rate_info['reset_in']} seconds. "
+                            f"Reason: {rate_info['reason']}",
+                            status_code=429
+                        )
         
         # ==================== RASP SECURITY ANALYSIS ====================
         if is_blocked(ip):
             return Response("IP temporarily blocked", status_code=403)
 
         try:
-            body_bytes = await request.body()
-            body_sample = body_bytes.decode("utf-8", errors="ignore")[:2000]
+            # Body already read in rate limiting section above
             features = extract_features(request, body_sample)
             
             method = request.method

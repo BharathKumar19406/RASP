@@ -29,6 +29,27 @@ class RedisKeyBuilder:
         return f"ratelimit:adaptive:{ip}:{endpoint}"
 
     @staticmethod
+    def rate_limit_counter(ip: str, endpoint: str) -> str:
+        """Simple counter for enhanced rate limiting"""
+        return f"ratelimit:counter:{ip}:{endpoint}"
+
+    # Tool-Aware Rate Limiting Keys
+    @staticmethod
+    def brute_force_attempts(ip: str, endpoint: str) -> str:
+        """Track brute force attempts per IP/endpoint"""
+        return f"tool_aware:brute_force:{ip}:{endpoint}"
+
+    @staticmethod
+    def fuzzing_attempts(ip: str, endpoint: str) -> str:
+        """Track fuzzing attempts per IP/endpoint"""
+        return f"tool_aware:fuzzing:{ip}:{endpoint}"
+
+    @staticmethod
+    def endpoint_tracking(ip: str) -> str:
+        """Track endpoints accessed by IP (scanner detection)"""
+        return f"tool_aware:endpoints:{ip}"
+
+    @staticmethod
     def blocked_ip(ip: str) -> str:
         """IP blocking key for enforcement"""
         return f"blocked:{ip}"
