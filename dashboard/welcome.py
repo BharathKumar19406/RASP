@@ -18,7 +18,7 @@ if not is_authenticated():
         username = st.text_input("Email", placeholder="admin@rasp.local")
         password = st.text_input("Password", type="password", placeholder="••••••••")
         
-        if st.button("Sign In", type="primary", use_container_width=True):
+        if st.button("Sign In", type="primary", width='stretch'):
             if login(username, password):
                 st.rerun()
             else:

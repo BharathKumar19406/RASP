@@ -1,7 +1,7 @@
-import hashlib
 import re
 from dataclasses import dataclass
 from fastapi import Request
+from utils.crypto import hash_ip
 
 @dataclass
 class RequestFeatures:
@@ -22,7 +22,7 @@ def extract_features(request: Request, body: str) -> RequestFeatures:
     endpoint = request.url.path
     method = request.method
     ip = request.client.host if request.client else "127.0.0.1"
-    ip_hash = hashlib.sha256(ip.encode()).hexdigest()[:16]
+    ip_hash = hash_ip(ip)
     ua = request.headers.get("user-agent", "")
     
     body_size = len(body)

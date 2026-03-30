@@ -10,6 +10,6 @@ def show_config_pane():
     with tab2: show_dashboard()
     with tab3: show_export()
     
-    if st.sidebar.button("🚪 Logout", use_container_width=True):
+    if st.sidebar.button("🚪 Logout", width='stretch'):
         from utils.auth import logout
         logout()
