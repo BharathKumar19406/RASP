@@ -27,3 +27,4 @@ class RuntimeEvent(Base):
     adaptation_triggered = Column(Boolean, default=False)  # Whether baseline was adapted
     user_role = Column(String)
     user_agent = Column(String)
+    is_flagged = Column(Boolean, default=False)  # For SOC Analysts to flag/unflag request

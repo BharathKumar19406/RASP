@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Set global pycache prefix to a single folder in the project root
+os.environ["PYTHONPYCACHEPREFIX"] = os.path.join(os.getcwd(), ".pycache")
+
 def main():
     required = ["DB_URL", "REDIS_URL", "LOG_SECRET_KEY"]
     for var in required:

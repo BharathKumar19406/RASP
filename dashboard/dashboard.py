@@ -6,6 +6,16 @@ from datetime import datetime, timedelta
 from storage.db import SessionLocal
 from storage.models import RuntimeEvent
 
+def toggle_flag(event_id, new_status):
+    db_local = SessionLocal()
+    try:
+        ev = db_local.query(RuntimeEvent).filter(RuntimeEvent.id == event_id).first()
+        if ev:
+            ev.is_flagged = new_status
+            db_local.commit()
+    finally:
+        db_local.close()
+
 def show_dashboard():
     st.subheader("🚨 Security Events & Request Analysis")
     
@@ -20,7 +30,7 @@ def show_dashboard():
         return
 
     # ==================== TABS ====================
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "🔍 Detailed Events", "🎯 Request Sectors", "📈 Adaptation Metrics"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Overview", "🔍 Detailed Events", "🎯 Request Sectors", "📈 Adaptation Metrics", "🛡️ SOC Analyst"])
     
     # ==================== TAB 1: OVERVIEW ====================
     with tab1:
@@ -115,6 +125,9 @@ def show_dashboard():
                     st.write("**📊 Risk Level**")
                     risk_color = {"LOW": "🟢", "MEDIUM": "🟡", "HIGH": "🔴"}
                     st.write(f"{risk_color.get(event.risk_level, '⚪')} {event.risk_level}")
+                    flag_status = "🚩 Flagged" if hasattr(event, 'is_flagged') and event.is_flagged else ""
+                    if flag_status:
+                        st.write(f"**{flag_status}**")
                     st.write("**🎯 Drift Score**")
                     st.write(f"{event.drift_score:.1f}")
                     st.write("**🔐 Confidence**")
@@ -305,3 +318,33 @@ def show_dashboard():
         
         st.dataframe(endpoint_df, width='stretch')
 
+    # ==================== TAB 5: SOC ANALYST CONSOLE ====================
+    with tab5:
+        st.write("### 🛡️ SOC Analyst Console")
+        st.write("Triage and manage flagged requests for further investigation.")
+        
+        flagged_events = [e for e in events if getattr(e, 'is_flagged', False)]
+        unflagged_events = [e for e in events if not getattr(e, 'is_flagged', False) and getattr(e, 'risk_level', '') in ["MEDIUM", "HIGH"]]
+        
+        col_f, col_u = st.columns(2)
+        with col_f:
+            st.subheader(f"🚩 Flagged for Triage ({len(flagged_events)})")
+            for e in flagged_events:
+                with st.expander(f"🚩 {e.timestamp.strftime('%H:%M:%S')} | {e.attack_type}", expanded=False):
+                    st.write(f"**Endpoint:** {e.endpoint}")
+                    st.write(f"**IP:** {e.ip_hash}")
+                    st.write(f"**Risk Level:** {e.risk_level}")
+                    if st.button("Unflag", key=f"unflag_{e.id}"):
+                        toggle_flag(e.id, False)
+                        st.rerun()
+
+        with col_u:
+            st.subheader(f"⚠️ High/Medium Risk to Review ({len(unflagged_events)})")
+            for e in unflagged_events[:20]:
+                with st.expander(f"⚠️ {e.timestamp.strftime('%H:%M:%S')} | {e.attack_type}", expanded=False):
+                    st.write(f"**Endpoint:** {e.endpoint}")
+                    st.write(f"**IP:** {e.ip_hash}")
+                    st.write(f"**Risk Level:** {e.risk_level}")
+                    if st.button("Flag for Review", key=f"flag_{e.id}"):
+                        toggle_flag(e.id, True)
+                        st.rerun()
