@@ -232,10 +232,13 @@ class ToolAwareRateLimiter:
         if scanner_limit:
             return scanner_limit
         
-        # 5. Default: Normal rate limits
+        # 5. Default: Normal rate limits from configuration
+        from config.constants import ENDPOINT_RATE_LIMITS
+        config = ENDPOINT_RATE_LIMITS.get(endpoint, ENDPOINT_RATE_LIMITS["default"])
+        
         return {
-            "max_requests": 10,
-            "window_seconds": 1,
+            "max_requests": config["max_requests"],
+            "window_seconds": config["window_seconds"],
             "reason": "Normal request",
             "risk_level": "LOW"
         }

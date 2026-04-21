@@ -28,10 +28,13 @@ def extract_features(request: Request, body: str) -> RequestFeatures:
     body_size = len(body)
     param_count = len(request.query_params)
     
-    has_sql = bool(re.search(r"(?i)(union\s+select|or\s+1\s*=\s*1)", body))
-    has_xss = bool(re.search(r"<script|javascript:", body, re.IGNORECASE))
-    has_path_traversal = "../" in body or "..\\" in body
-    has_ssr = "127.0.0.1" in body or "localhost" in body
+    # Combined analysis of path, query, and body for thorough detection
+    full_request_text = f"{endpoint} ?{request.url.query} {body}"
+    
+    has_sql = bool(re.search(r"(?i)(union\s+select|or\s+1\s*=\s*1|' OR '|\-\-)", full_request_text))
+    has_xss = bool(re.search(r"<script|javascript:|alert\(|onerror=|onload=", full_request_text, re.IGNORECASE))
+    has_path_traversal = bool(re.search(r"\.\./|\.\.\\|/etc/passwd|/etc/shadow|windows/system32|boot\.ini", full_request_text, re.IGNORECASE))
+    has_ssr = bool(re.search(r"127\.0\.0\.1|localhost|169\.254\.169\.254|metadata\.google\.internal", full_request_text, re.IGNORECASE))
     has_jwt = "Authorization" in request.headers and "Bearer " in request.headers["Authorization"]
 
     return RequestFeatures(

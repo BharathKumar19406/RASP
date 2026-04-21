@@ -13,4 +13,4 @@ def apply_mitigation(action: str, ip: str):
         return
     r = get_redis()
     if action == "block":
-        r.setex(f"blocked:{ip}", 300, "1")
+        r.setex(f"blocked:{ip}", settings.RATE_LIMIT_BLOCK_DURATION, "1")

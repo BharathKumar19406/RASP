@@ -51,7 +51,7 @@ ENDPOINT_RATE_LIMITS = {
     "default": {"max_requests": 10, "window_seconds": 1},
     "/login": {"max_requests": 5, "window_seconds": 60},
     "/api/auth": {"max_requests": 5, "window_seconds": 60},
-    "/api/users": {"max_requests": 100, "window_seconds": 1},
+    "/api/users": {"max_requests": 10, "window_seconds": 1},
     "/upload": {"max_requests": 2, "window_seconds": 1},
     "/export": {"max_requests": 1, "window_seconds": 10},
 }

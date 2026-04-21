@@ -37,8 +37,9 @@ def classify_attack(endpoint: str, method: str, body: str, headers: dict, featur
             "type": "SQL Injection",
             "category": "SQL_INJECTION",
             "confidence": 0.95,
+            "risk_level": "CRITICAL",
             "evidence": evidence,
-            "description": f"SQL injection vectors detected in request body. Keywords like 'UNION SELECT' or 'OR 1=1' found. Endpoint: {endpoint}"
+            "description": f"SQL injection vectors detected. Keywords like 'UNION SELECT' or 'OR 1=1' found in request. Endpoint: {endpoint}"
         }
 
     # 2. XSS (even in small bodies)
@@ -48,8 +49,9 @@ def classify_attack(endpoint: str, method: str, body: str, headers: dict, featur
             "type": "XSS Attempt",
             "category": "XSS",
             "confidence": 0.90,
+            "risk_level": "HIGH",
             "evidence": evidence,
-            "description": f"Cross-Site Scripting (XSS) payload detected. Script tags or JavaScript: protocol found in request. Endpoint: {endpoint}"
+            "description": f"Cross-Site Scripting (XSS) payload detected. Script tags or JavaScript patterns found in request. Endpoint: {endpoint}"
         }
 
     # 3. Path Traversal
@@ -59,6 +61,7 @@ def classify_attack(endpoint: str, method: str, body: str, headers: dict, featur
             "type": "Path Traversal",
             "category": "PATH_TRAVERSAL",
             "confidence": 0.93,
+            "risk_level": "CRITICAL",
             "evidence": evidence,
             "description": f"Path traversal sequence detected (../ or ..). Attempting to access files outside intended directory. Endpoint: {endpoint}"
         }
@@ -70,6 +73,7 @@ def classify_attack(endpoint: str, method: str, body: str, headers: dict, featur
             "type": "SSRF Attempt",
             "category": "SSRF",
             "confidence": 0.88,
+            "risk_level": "HIGH",
             "evidence": evidence,
             "description": f"Server-Side Request Forgery (SSRF) detected. Internal IP addresses (127.0.0.1/localhost) referenced. Endpoint: {endpoint}"
         }
@@ -81,8 +85,9 @@ def classify_attack(endpoint: str, method: str, body: str, headers: dict, featur
             "type": "Command Injection",
             "category": "COMMAND_INJECTION",
             "confidence": 0.95,
+            "risk_level": "CRITICAL",
             "evidence": evidence,
-            "description": f"Shell metacharacters and command injection patterns detected. Attempt to execute system commands: {'; cat' if '; cat ' in body else '&& id' if '&& id' in body else 'shell command'}. Endpoint: {endpoint}"
+            "description": f"Shell metacharacters and command injection patterns detected. Attempt to execute system commands. Endpoint: {endpoint}"
         }
 
     # 6. XXE
@@ -92,6 +97,7 @@ def classify_attack(endpoint: str, method: str, body: str, headers: dict, featur
             "type": "XXE Attempt",
             "category": "XXE",
             "confidence": 0.92,
+            "risk_level": "HIGH",
             "evidence": evidence,
             "description": f"XML External Entity (XXE) injection detected. XML DTD and ENTITY/SYSTEM declarations found. Endpoint: {endpoint}"
         }
@@ -103,6 +109,7 @@ def classify_attack(endpoint: str, method: str, body: str, headers: dict, featur
             "type": "Parameter Spam",
             "category": "PARAMETER_SPAM",
             "confidence": 0.80,
+            "risk_level": "MEDIUM",
             "evidence": evidence,
             "description": f"Excessive query parameters detected ({features.param_count} params). Possible parameter pollution or fuzzing attack. Endpoint: {endpoint}"
         }
@@ -114,6 +121,7 @@ def classify_attack(endpoint: str, method: str, body: str, headers: dict, featur
             "type": "Payload Flooding",
             "category": "PAYLOAD_FLOODING",
             "confidence": 0.90,
+            "risk_level": "HIGH",
             "evidence": evidence,
             "description": f"Payload flooding detected. Large body size ({features.body_size} bytes) with high drift score ({drift_score:.1f}). Endpoint: {endpoint}"
         }
@@ -123,6 +131,7 @@ def classify_attack(endpoint: str, method: str, body: str, headers: dict, featur
         "type": "Behavioral Anomaly",
         "category": "BEHAVIORAL_ANOMALY",
         "confidence": 0.65,
+        "risk_level": "LOW",
         "evidence": ["deviation_from_baseline"],
         "description": f"Request behavior deviates from baseline profile. Drift score: {drift_score:.1f}. Method: {method}, Params: {features.param_count}, Body size: {features.body_size} bytes. Endpoint: {endpoint}"
     }
