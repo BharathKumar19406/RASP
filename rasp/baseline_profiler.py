@@ -7,7 +7,9 @@ def update_baseline(endpoint: str, method: str, features):
     r = get_redis()
     key = f"baseline:{endpoint}:{method}"
     data = r.get(key)
-    baseline = json.loads(data) if data else {"sizes": []}
+    baseline = json.loads(data) if data else {}
+    if "sizes" not in baseline:
+        baseline["sizes"] = []
     
     baseline["sizes"].append(features.body_size)
     baseline["sizes"] = baseline["sizes"][-1000:]
