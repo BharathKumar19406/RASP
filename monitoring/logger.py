@@ -18,6 +18,19 @@ def log_event(features, drift_score, risk_level, attack: dict, adaptation_info: 
             baseline_after = adaptation_info.get("baseline_after")
             adaptation_triggered = adaptation_info.get("adapted", False)
         
+        # Use the highest risk between behavioral analysis and static pattern detection
+        static_risk = attack.get("risk_level", "LOW")
+        risk_priority = {"CRITICAL": 3, "HIGH": 2, "MEDIUM": 1, "LOW": 0}
+        
+        # Determine highest risk
+        current_risk_val = risk_priority.get(risk_level, 0)
+        static_risk_val = risk_priority.get(static_risk, 0)
+        
+        final_risk = risk_level
+        if static_risk_val > current_risk_val:
+            final_risk = static_risk
+            if final_risk == "CRITICAL": final_risk = "HIGH"
+            
         event = RuntimeEvent(
             id=str(uuid.uuid4()),
             ip_hash=features.ip_hash,
@@ -27,7 +40,7 @@ def log_event(features, drift_score, risk_level, attack: dict, adaptation_info: 
             param_count=features.param_count,
             body_size=features.body_size,
             drift_score=drift_score,
-            risk_level=risk_level,
+            risk_level=final_risk,
             attack_type=attack["type"],
             attack_category=attack.get("category", "UNKNOWN"),
             attack_confidence=attack["confidence"],
