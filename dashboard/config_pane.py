@@ -5,9 +5,9 @@ from dashboard.export_logs import show_export
 
 def show_config_pane():
     st.title("⚙️ Configuration Pane")
-    tab1, tab2, tab3 = st.tabs(["Settings", "Dashboard", "Export Logs"])
-    with tab1: show_settings()
-    with tab2: show_dashboard()
+    tab1, tab2, tab3 = st.tabs(["📊 Dashboard", "⚙️ Settings", "📤 Export Logs"])
+    with tab1: show_dashboard()
+    with tab2: show_settings()
     with tab3: show_export()
     
     if st.sidebar.button("🚪 Logout", width='stretch'):
